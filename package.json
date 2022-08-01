@@ -1,0 +1,41 @@
+{
+  "name": "rad-lab-notify-cloud-function",
+  "version": "1.0.0",
+  "description": "A Google Cloud Function that notifies stakeholders about the status of the deployment of a RAD Lab module.",
+  "main": "index.js",
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint . --ext .js",
+    "fix": "eslint . --ext .js --fix",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcusmonteirodesouza/rad-lab-notify-cloud-function.git"
+  },
+  "keywords": [],
+  "author": "Marcus Vinicius Monteiro de Souza",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marcusmonteirodesouza/rad-lab-notify-cloud-function/issues"
+  },
+  "homepage": "https://github.com/marcusmonteirodesouza/rad-lab-notify-cloud-function#readme",
+  "dependencies": {
+    "@google-cloud/firestore": "^5.0.2",
+    "@google-cloud/functions-framework": "^3.1.2",
+    "husky": "^8.0.1",
+    "joi": "^17.6.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.20.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "lint-staged": "^13.0.3",
+    "prettier": "^2.7.1"
+  },
+  "lint-staged": {
+    "*.js": "eslint --cache --fix",
+    "*.{json,md,yaml}": "prettier --write"
+  }
+}

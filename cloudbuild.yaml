@@ -1,0 +1,21 @@
+steps:
+  - name: 'google/cloud-sdk'
+    args:
+      [
+        'gcloud',
+        'beta',
+        'functions',
+        'deploy',
+        'notify-rad-lab',
+        '--gen2',
+        '--runtime',
+        'nodejs16',
+        '--trigger-topic',
+        'cloud-builds',
+        '--entry-point',
+        'notifyRadLab',
+        '--source',
+        '.',
+        '--region',
+        '${_REGION}',
+      ]
