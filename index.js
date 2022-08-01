@@ -1,12 +1,15 @@
 const functions = require('@google-cloud/functions-framework');
 const { Firestore } = require('@google-cloud/firestore');
 const { Storage } = require('@google-cloud/storage');
+const { NotebookServiceClient } = require('@google-cloud/notebooks');
 
 const buildStatusSuccess = 'SUCCESS';
 
 functions.cloudEvent('notifyRadLab', async (cloudEvent) => {
+  const cloudEventDataMessageData = cloudEvent.data.message.data;
+
   const buildData = JSON.parse(
-    Buffer.from(cloudEvent.data.message.data, 'base64').toString()
+    Buffer.from(cloudEventDataMessageData, 'base64').toString()
   );
 
   const triggerName = buildData['substitutions']['TRIGGER_NAME'];
@@ -40,6 +43,7 @@ functions.cloudEvent('notifyRadLab', async (cloudEvent) => {
     buildStatus,
     requestId,
     tfStateBucketName,
+    cloudEventDataMessageData,
   });
 
   const firestore = new Firestore();
@@ -58,8 +62,7 @@ functions.cloudEvent('notifyRadLab', async (cloudEvent) => {
   const downloadTfStateFileResponse = await tfStateBucket
     .file(tfStateFile)
     .download();
-  const tfState = downloadTfStateFileResponse.toString();
-  console.log(tfState);
+  const tfState = JSON.parse(downloadTfStateFileResponse.toString());
 
   switch (triggerName) {
     case alphaFoldTriggerName:
@@ -99,13 +102,33 @@ async function handleAlphaFold(buildStatus, requestData, tfState) {
  * @param {any} tfState
  */
 async function handleDataScience(buildStatus, requestData, tfState) {
-  function handleSuccess() {
-    console.log('handleDataScience SUCCESS!');
-    console.log(JSON.stringify(tfState));
+  async function handleSuccess() {
+    const projectId =
+      tfState['outputs']['project-radlab-ds-analytics-id']['value'];
+    const notebookInstanceNames =
+      tfState['outputs']['notebooks-instance-names']['value'].split(',');
+    const notebookInstanceLocations =
+      tfState['outputs']['notebooks-instance-locations']['value'].split(',');
+
+    const notebooksServiceClient = new NotebookServiceClient();
+    for (const [
+      notebookInstanceName,
+      notebookInstanceLocation,
+    ] of notebookInstanceNames.map((instanceName, i) => [
+      instanceName,
+      notebookInstanceLocations[i],
+    ])) {
+      const [notebookInstance] = await notebooksServiceClient.getInstance({
+        name: `projects/${projectId}/locations/${notebookInstanceLocation}/instances/${notebookInstanceName}`,
+      });
+      console.log(
+        JSON.stringify({ notebookInstance, notebookInstanceLocation })
+      );
+    }
   }
 
   if (buildStatus === buildStatusSuccess) {
-    handleSuccess();
+    await handleSuccess();
   } else {
     console.log(`Not implemented for buildStatus ${buildStatus}`);
   }
