@@ -18,4 +18,8 @@ steps:
         '.',
         '--region',
         '${_REGION}',
+        '--set-secrets',
+        'SENDGRID_API_KEY=${_SENDGRID_API_KEY_SECRET_NAME}:latest',
+        '--set-env-vars',
+        'SENDGRID_SENDER_EMAIL=${_SENDGRID_SENDER_EMAIL}',
       ]

@@ -1,11 +1,15 @@
 const functions = require('@google-cloud/functions-framework');
-const { Firestore } = require('@google-cloud/firestore');
+// eslint-disable-next-line no-unused-vars
+const { Firestore, DocumentSnapshot } = require('@google-cloud/firestore');
 const { Storage } = require('@google-cloud/storage');
 const { NotebookServiceClient } = require('@google-cloud/notebooks');
+const sgMail = require('@sendgrid/mail');
 
 const buildStatusSuccess = 'SUCCESS';
 
 functions.cloudEvent('notifyRadLab', async (cloudEvent) => {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
   const cloudEventDataMessageData = cloudEvent.data.message.data;
 
   const buildData = JSON.parse(
@@ -88,7 +92,7 @@ functions.cloudEvent('notifyRadLab', async (cloudEvent) => {
 /**
  * Handles alpha_fold deployments
  * @param {string} firestore
- * @param {any} requestData
+ * @param {DocumentSnapshot} requestData
  * @param {any} tfState
  */
 async function handleAlphaFold(buildStatus, requestData, tfState) {
@@ -98,7 +102,7 @@ async function handleAlphaFold(buildStatus, requestData, tfState) {
 /**
  * Handles data_science deployments
  * @param {string} firestore
- * @param {any} requestData
+ * @param {DocumentSnapshot} requestData
  * @param {any} tfState
  */
 async function handleDataScience(buildStatus, requestData, tfState) {
@@ -111,6 +115,7 @@ async function handleDataScience(buildStatus, requestData, tfState) {
       tfState['outputs']['notebooks-instance-locations']['value'].split(',');
 
     const notebooksServiceClient = new NotebookServiceClient();
+    const notebookInstances = [];
     for (const [
       notebookInstanceName,
       notebookInstanceLocation,
@@ -121,10 +126,28 @@ async function handleDataScience(buildStatus, requestData, tfState) {
       const [notebookInstance] = await notebooksServiceClient.getInstance({
         name: `projects/${projectId}/locations/${notebookInstanceLocation}/instances/${notebookInstanceName}`,
       });
-      console.log(
-        JSON.stringify({ notebookInstance, notebookInstanceLocation })
-      );
+      notebookInstances.push(notebookInstance);
     }
+
+    const sendgridSenderEmail = process.env.SENDGRID_SENDER_EMAIL;
+
+    const emailMsg = {
+      to: requestData.data()['requester']['email'],
+      from: sendgridSenderEmail,
+      subject: 'Your data-science project is ready',
+      html: `
+        <p>Access your notebooks by clicking the links below:</p>
+        <ul>
+          ${notebookInstances.map((notebookInstance) => {
+            return `
+              <li><a href=${notebookInstance.proxyUri}>${notebookInstance.proxyUri}</a></li>
+            `;
+          })}
+        </ul>
+      `,
+    };
+
+    await sgMail.send(emailMsg);
   }
 
   if (buildStatus === buildStatusSuccess) {
@@ -137,7 +160,7 @@ async function handleDataScience(buildStatus, requestData, tfState) {
 /**
  * Handles genomics_cromwell deployments
  * @param {string} firestore
- * @param {any} requestData
+ * @param {DocumentSnapshot} requestData
  * @param {any} tfState
  */
 async function handleGenomicsCromwell(buildStatus, requestData, tfState) {
@@ -147,7 +170,7 @@ async function handleGenomicsCromwell(buildStatus, requestData, tfState) {
 /**
  * Handles genomics_dsub deployments
  * @param {string} firestore
- * @param {any} requestData
+ * @param {DocumentSnapshot} requestData
  * @param {any} tfState
  */
 async function handleGenomicsDSub(buildStatus, requestData, tfState) {
@@ -157,7 +180,7 @@ async function handleGenomicsDSub(buildStatus, requestData, tfState) {
 /**
  * Handles silicon_design deployments
  * @param {string} firestore
- * @param {any} requestData
+ * @param {DocumentSnapshot} requestData
  * @param {any} tfState
  */
 async function handleSiliconDesign(buildStatus, requestData, tfState) {
