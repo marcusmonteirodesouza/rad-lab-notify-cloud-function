@@ -1,2 +1,2 @@
-# Scince Comp Notify Cloud Function
+# Science Comp Notify Cloud Function
 
